@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 use App\Models\Task;
+use App\Models\UserTask;
 
 class TasksController extends Controller
 {
@@ -18,7 +20,12 @@ class TasksController extends Controller
     public function my_tasks(Request $request)
     {
         $userId = $request->user_id;
-        $tasks = Task::where('user_id', $userId)->get();
+        $tasks = DB::table('user_tasks')
+            ->leftJoin('tasks', 'user_tasks.task_id', '=', 'tasks.id')
+            ->leftJoin('status', 'user_tasks.status_id', '=', 'status.id')
+            ->where('user_tasks.user_id', $userId)
+            ->select('tasks.*', 'user_tasks.*', 'status.name AS status_name')
+            ->get();
         return response()->json(['tasks' => $tasks]);
     }
 
@@ -60,6 +67,43 @@ class TasksController extends Controller
         
         return response()->json(['task' => $task]);
     }
+
+    public function update_tasks(Request $request) {
+        $payload = $request->all();
+
+        $ids = $payload['ids'];
+        $status_id = $payload['status_id'];
+        $user_id = $payload['user_id'];
+
+        try {
+            DB::beginTransaction();
+
+            foreach ($ids as $id) {
+                $user_task = UserTask::where('user_id', $user_id)
+                                    ->where('task_id', $id)
+                                    ->first();
+
+                if ($user_task) {
+                    $user_task->status_id = $status_id;
+                    $user_task->save();
+                } else {
+                    $user_task = new UserTask;
+                    $user_task->user_id = $user_id;
+                    $user_task->task_id = $id;
+                    $user_task->status_id = $status_id;
+                    $user_task->save();
+                }
+            }
+
+            DB::commit();
+
+            return response()->json(['message' => 'Tasks updated successfully']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()]);
+        }
+    }
+
 
     public function destroy($id)
     {

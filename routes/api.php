@@ -51,8 +51,10 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
     Route::get('/status/users', [StatusController::class, 'getTaskUsers']);
     Route::get('/status/stats', [StatusController::class, 'getTaskStats']);
 
-    
+
     //Users
+    Route::post('/task/update', [TasksController::class, 'update_tasks']);
+
 
 
     // Route::resource('/status', [StatusController::class, 'index']);
