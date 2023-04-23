@@ -13,7 +13,12 @@ class TasksController extends Controller
 {
     public function index()
     {
-        $tasks = Task::all();
+        $tasks = Task::leftJoin('status', 'status.id', '=', 'tasks.status_id')
+            ->leftJoin('user_tasks', 'tasks.id', '=', 'user_tasks.task_id')
+            ->leftJoin('users', 'users.id', '=', 'user_tasks.user_id')
+            ->select('tasks.*', 'users.name AS user_name', 'status.name AS status_name')
+            ->get();
+
         return response()->json(['tasks' => $tasks]);
     }
 
@@ -25,24 +30,23 @@ class TasksController extends Controller
             ->leftJoin('status', 'user_tasks.status_id', '=', 'status.id')
             ->where('user_tasks.user_id', $userId)
             ->select('tasks.*', 'user_tasks.*', 'status.name AS status_name')
+            ->orderBy('tasks.id', 'asc')
             ->get();
-        return response()->json(['tasks' => $tasks]);
+        return response()->json($tasks);
     }
 
     public function store(Request $request)
     {
         $validatedData = $request->validate([
             'title' => 'required|max:255',
-            'description' => 'required',
-            'status' => 'required',
-            'due_date' => 'required|date_format:Y-m-d',
+            'description' => '',
+            'date' => '',
         ]);
 
         $task = new Task;
-        $task->title = $validatedData['title'];
+        $task->name = $validatedData['title'];
         $task->description = $validatedData['description'];
-        $task->status = $validatedData['status'];
-        $task->due_date = $validatedData['due_date'];
+        $task->due_date = $validatedData['date'];
         $task->save();
 
         return response()->json(['task' => $task]);
@@ -75,34 +79,30 @@ class TasksController extends Controller
         $status_id = $payload['status_id'];
         $user_id = $payload['user_id'];
 
-        try {
-            DB::beginTransaction();
+        // return $payload;
 
-            foreach ($ids as $id) {
-                $user_task = UserTask::where('user_id', $user_id)
-                                    ->where('task_id', $id)
-                                    ->first();
-
-                if ($user_task) {
-                    $user_task->status_id = $status_id;
-                    $user_task->save();
-                } else {
-                    $user_task = new UserTask;
-                    $user_task->user_id = $user_id;
-                    $user_task->task_id = $id;
-                    $user_task->status_id = $status_id;
-                    $user_task->save();
-                }
+        foreach ($ids as $id) {
+            $user_task = UserTask::where('user_id', $user_id)
+                                ->where('task_id', $id)
+                                ->first();
+            if ($user_task) {
+                $user_task->status_id = $status_id;
+                $user_task->save();
+            } else {
+                $user_task = new UserTask;
+                $user_task->user_id = $user_id;
+                $user_task->task_id = $id;
+                $user_task->status_id = $status_id;
+                $user_task->save();
             }
 
-            DB::commit();
-
-            return response()->json(['message' => 'Tasks updated successfully']);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['error' => $e->getMessage()]);
+            $task = Task::where('id', $id)->first();
+            $task->status_id = $status_id;
+            $task->save();
         }
-    }
+
+        return response()->json(['message' => 'Tasks updated successfully']);
+    } 
 
 
     public function destroy($id)
