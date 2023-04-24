@@ -40,6 +40,8 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
     Route::get('/tasks', [TasksController::class, 'index']);
     Route::post('/my-tasks', [TasksController::class, 'my_tasks']);
 
+    Route::post('/task/update', [TasksController::class, 'update_tasks']);
+
     Route::post('/tasks', [TasksController::class, 'store']);
     Route::post('/tasks/{id}', [TasksController::class, 'update'])->where('id', '[0-9]+');;
     Route::delete('/tasks', [TasksController::class, 'destroy']);
@@ -53,7 +55,6 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
 
 
     //Users
-    Route::post('/task/update', [TasksController::class, 'update_tasks']);
 
 
 

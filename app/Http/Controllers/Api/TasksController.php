@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 use App\Models\Task;
 use App\Models\UserTask;
+use Carbon\Carbon;
 
 class TasksController extends Controller
 {
@@ -87,12 +88,24 @@ class TasksController extends Controller
                                 ->first();
             if ($user_task) {
                 $user_task->status_id = $status_id;
+                if($status_id == 3) {
+                    $user_task->end_time = Carbon::now();
+                }
+                if($status_id == 2) {
+                    $user_task->start_time = Carbon::now();
+                }
                 $user_task->save();
             } else {
                 $user_task = new UserTask;
                 $user_task->user_id = $user_id;
                 $user_task->task_id = $id;
                 $user_task->status_id = $status_id;
+                if($status_id == 3) {
+                    $user_task->end_time = Carbon::now();
+                }
+                if($status_id == 2) {
+                    $user_task->start_time = Carbon::now();
+                }
                 $user_task->save();
             }
 
